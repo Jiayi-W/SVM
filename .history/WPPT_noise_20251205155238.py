@@ -1,4 +1,4 @@
-from quantum_utils import H7, H5, poly_log_t, H_stab_state_evol, stab_01n_op, ini_state_01
+from quantum_utils import H7, poly_log_t, H_stab_state_evol, stab_01n_op, ini_state_01
 from qiskit.quantum_info import Statevector, partial_trace, entropy
 import numpy as np
 import pandas as pd
@@ -113,7 +113,6 @@ def main():
 
     parser = argparse.ArgumentParser(description='WPPT noise robustness with multiple noise models')
     parser.add_argument('--n', type=int, default=7, help='Number of qubits')
-    parser.add_argument('--H', type=str, default='H7', choices=['H7','H5'], help='Hamiltonian name')
     parser.add_argument('--limit', type=float, default=0.03, help='Truncation limit for stabilizer sum')
     parser.add_argument('--turns', type=int, default=4, help='How often to construct witness (turns)')
     parser.add_argument('--max-round', type=int, default=20, help='Number of rounds to try')
@@ -125,9 +124,7 @@ def main():
 
     # Configuration
     n = args.n
-    H_name = args.H
-    H = H7 if H_name == 'H7' else H5
-    # If additional Hamiltonians are added to quantum_utils, extend mapping above
+    H = H7
     steps = args.steps
     t = poly_log_t
     limit = args.limit
@@ -137,7 +134,7 @@ def main():
 
     t_list = list(range(1, max_round))
 
-    test_ob = H_stab_state_evol(n, H, stab_01n_op, ini_state_01, poly_log_t, steps)
+    test_ob = H_stab_state_evol(n, H7, stab_01n_op, ini_state_01, poly_log_t, steps)
 
     results = {}
     noise_results = {}
@@ -197,12 +194,11 @@ def main():
             max_noise = step_data['max_noise']
             df = pd.DataFrame(noise_data)
 
-            # annotate dataframe with round and hamiltonian before aggregation
+            # Annotate round and add to combined list for this noise type
             try:
                 df['round'] = int(step_idx)
             except Exception:
                 df['round'] = step_idx
-            df['hamiltonian'] = H_name
             combined_noise_data.setdefault(nt, []).append(df)
 
             # Extract clean-state trace for summary
@@ -211,7 +207,7 @@ def main():
             except Exception:
                 clean_trace = float(df['trace_witness'].iloc[0]) if 'trace_witness' in df.columns and len(df) > 0 else float('nan')
 
-            summary_rows.append({'noise_type': nt, 'round': int(step_idx), 'max_noise': float(max_noise), 'clean_trace': clean_trace, 'hamiltonian': H_name})
+            summary_rows.append({'noise_type': nt, 'round': int(step_idx), 'max_noise': float(max_noise), 'clean_trace': clean_trace})
 
             # Trace plot (only if --save-plots)
             if args.save_plots:
@@ -248,7 +244,7 @@ def main():
     # Write aggregated summary CSV for quick overview
     if len(summary_rows) > 0:
         summary_df = pd.DataFrame(summary_rows)
-        summary_fname = f'noise_wppt_summary_n{n}_H{H_name}.csv'
+        summary_fname = f'noise_wppt_summary_n{n}.csv'
         summary_path = os.path.join(results_dir, summary_fname)
         summary_df.to_csv(summary_path, index=False)
         print(f'Aggregated WPPT noise summary saved to {summary_path}')
@@ -261,8 +257,7 @@ def main():
             combined_df = pd.concat(df_list, ignore_index=True)
         except Exception:
             combined_df = pd.DataFrame([r for sub in df_list for r in sub.to_dict(orient='records')])
-        limit_str = str(limit).replace('.', 'p')
-        combined_fname = f'noise_wppt_combined_{nt}_n{n}_H{H_name}_limit{limit_str}_turns{turns}_maxround{max_round}.csv'
+        combined_fname = f'noise_wppt_combined_{nt}_n{n}_limit{limit}_turns{turns}_maxround{max_round}.csv'
         combined_path = os.path.join(results_dir, combined_fname)
         combined_df.to_csv(combined_path, index=False)
         print(f'Aggregated WPPT combined CSV saved to {combined_path}')

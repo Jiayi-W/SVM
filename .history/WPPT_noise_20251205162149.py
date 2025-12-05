@@ -1,4 +1,4 @@
-from quantum_utils import H7, H5, poly_log_t, H_stab_state_evol, stab_01n_op, ini_state_01
+from quantum_utils import H7, poly_log_t, H_stab_state_evol, stab_01n_op, ini_state_01
 from qiskit.quantum_info import Statevector, partial_trace, entropy
 import numpy as np
 import pandas as pd
@@ -126,7 +126,7 @@ def main():
     # Configuration
     n = args.n
     H_name = args.H
-    H = H7 if H_name == 'H7' else H5
+    H = H7 if H_name == 'H7' else None
     # If additional Hamiltonians are added to quantum_utils, extend mapping above
     steps = args.steps
     t = poly_log_t
